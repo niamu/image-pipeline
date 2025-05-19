@@ -1,6 +1,6 @@
 # image-pipeline
 
-This is a [Rust](https://www.rust-lang.org) CLI tool currently only used in generating WebP image assets of cards from the [Digimon Card Game (2020)](https://world.digimoncard.com/), but potentially will be modified for more generic use in the future.
+This is a [Rust](https://www.rust-lang.org) CLI tool used to compress and scale images into WebP.
 
 ## Usage
 
@@ -8,16 +8,19 @@ Using the compiled binary:
 
 ```
 $ image-pipeline --help
-image-pipeline 0.1.0
+image-pipeline 0.2.0
 
 USAGE:
-    image-pipeline --src <input-dir> --dest <output-dir>
+    image-pipeline [FLAGS] [OPTIONS] --src <input-dir> --dest <output-dir>
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+        --help             Prints help information
+        --scale-contain    Maintain aspect ratio and scale image to contain within <width> and <height>
+    -V, --version          Prints version information
 
 OPTIONS:
+    -h, --height <height>       [default: 600]
         --src <input-dir>
         --dest <output-dir>
+    -w, --width <width>         [default: 430]
 ```

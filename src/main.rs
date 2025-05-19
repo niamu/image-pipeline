@@ -14,10 +14,19 @@ struct Cli {
 
     #[structopt(long = "dest")]
     output_dir: String,
-}
 
-const TARGET_WIDTH: u32 = 430;
-const TARGET_HEIGHT: u32 = 600;
+    #[structopt(short, long, default_value = "430")]
+    width: u32,
+
+    #[structopt(short, long, default_value = "600")]
+    height: u32,
+
+    #[structopt(
+        long,
+        help = "Maintain aspect ratio and scale image to contain within <width> and <height>"
+    )]
+    scale_contain: bool,
+}
 
 fn main() {
     let args = Cli::from_args();
@@ -56,7 +65,7 @@ fn main() {
         .collect();
 
     image_paths.par_iter().for_each(|path| {
-        if let Err(e) = process_image(path, input_path, output_path) {
+        if let Err(e) = process_image(&args, path, input_path, output_path) {
             println!("Error processing {:?}: {}", path, e);
         }
     });
@@ -81,7 +90,12 @@ fn replace_alpha_with_white(image: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgba8(result)
 }
 
-fn process_image(path: &Path, input_path: &Path, output_path: &Path) -> Result<(), Box<dyn Error>> {
+fn process_image(
+    args: &Cli,
+    path: &Path,
+    input_path: &Path,
+    output_path: &Path,
+) -> Result<(), Box<dyn Error>> {
     // Get relative path from base input dir
     let relative_path = path.strip_prefix(input_path)?;
     let new_path = output_path.join(relative_path).with_extension("webp");
@@ -93,9 +107,13 @@ fn process_image(path: &Path, input_path: &Path, output_path: &Path) -> Result<(
     let mut img = image::open(path)?;
     let (width, height) = img.dimensions();
 
-    // Resize image if it doesn't match target dimensions
-    if width != TARGET_WIDTH || height != TARGET_HEIGHT {
-        img = img.resize_exact(TARGET_WIDTH, TARGET_HEIGHT, FilterType::Lanczos3);
+    // Resize image to exact dimensions if it doesn't match already
+    if !args.scale_contain && (width != args.width || height != args.height) {
+        img = img.resize_exact(args.width, args.height, FilterType::Lanczos3);
+    }
+
+    if args.scale_contain && (width > args.width || height > args.height) {
+        img = img.resize(args.width, args.height, FilterType::Lanczos3);
     }
 
     img = replace_alpha_with_white(&img);
