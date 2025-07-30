@@ -26,6 +26,9 @@ struct Cli {
         help = "Maintain aspect ratio and scale image to contain within <width> and <height>"
     )]
     scale_contain: bool,
+
+    #[structopt(long, help = "Retain alpha channel")]
+    alpha: bool,
 }
 
 fn main() {
@@ -116,14 +119,16 @@ fn process_image(
         img = img.resize(args.width, args.height, FilterType::Lanczos3);
     }
 
-    img = replace_alpha_with_white(&img);
+    if !args.alpha {
+        img = replace_alpha_with_white(&img);
+    }
 
     // Create parent dirs if needed
     if let Some(parent) = new_path.parent() {
         fs::create_dir_all(parent)?;
     }
 
-    save_as_webp(&img, &new_path)?;
+    save_as_webp(&img, &new_path, args.alpha)?;
     println!(
         "{} => {}",
         path.to_string_lossy(),
@@ -133,11 +138,17 @@ fn process_image(
     Ok(())
 }
 
-fn save_as_webp(img: &DynamicImage, path: &Path) -> Result<(), Box<dyn Error>> {
+fn save_as_webp(img: &DynamicImage, path: &Path, alpha: bool) -> Result<(), Box<dyn Error>> {
     use webp::Encoder;
-    let rgb = img.to_rgb8();
-    let encoder = Encoder::from_rgb(&rgb, rgb.width(), rgb.height());
-    let webp_data = encoder.encode(85.0);
+    let webp_data = if alpha {
+        let channels = img.to_rgba8();
+        let encoder = Encoder::from_rgba(&channels, channels.width(), channels.height());
+        encoder.encode(85.0)
+    } else {
+        let channels = img.to_rgb8();
+        let encoder = Encoder::from_rgb(&channels, channels.width(), channels.height());
+        encoder.encode(85.0)
+    };
     fs::write(path, &*webp_data)?;
     Ok(())
 }
